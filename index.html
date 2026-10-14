@@ -264,13 +264,20 @@ void logActivity("app_open");
       return data;
     }
 
-    function switchTab(tabId, element) {
-      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      document.getElementById('view-' + tabId).classList.add('active');
-      element.classList.add('active');
-      renderUI();
-    }
+
+function switchTab(tabId, element) {
+  document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + tabId).classList.add('active');
+  element.classList.add('active');
+  renderUI();
+
+  // ページ移動を記録
+  void logActivity("page_view", {
+    page: tabId
+  });
+}
+
 
     function updateCategoryDropdown() {
       const select = document.getElementById('category');
