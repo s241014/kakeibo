@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -178,6 +179,65 @@
   </nav>
 
   <script>
+    
+const SUPABASE_URL = "https://uncyjfvnqdkddxvyljaa.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_Mp2hWVnTzu5TarN6sjb09w_4HFBVVeE";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
+
+// 匿名ユーザーを取得する。同じブラウザのセッションは再利用する。
+async function initializeAnonymousUser() {
+  const {
+    data: { session },
+    error: sessionError
+  } = await supabaseClient.auth.getSession();
+
+  if (sessionError) throw sessionError;
+
+  if (session?.user) {
+    return session.user;
+  }
+
+  const { data, error } =
+    await supabaseClient.auth.signInAnonymously();
+
+  if (error) throw error;
+  if (!data.user) {
+    throw new Error("匿名ユーザーを取得できません");
+  }
+
+  return data.user;
+}
+
+const anonymousUserReady = initializeAnonymousUser();
+
+// 行動ログを保存する
+async function logActivity(eventType, eventData = {}) {
+  try {
+    const user = await anonymousUserReady;
+
+    const { error } = await supabaseClient
+      .from("activity_logs")
+      .insert({
+        user_id: user.id,
+        event_type: eventType,
+        event_data: eventData
+      });
+
+    if (error) {
+      console.error("行動ログの保存に失敗:", error.message);
+    }
+  } catch (error) {
+    console.error("匿名認証またはログ保存に失敗:", error);
+  }
+}
+
+// アプリを開いたときのログ
+void logActivity("app_open");
+
     const CATEGORIES = {
       expense: ["🍖 食費", "🧴 日用品", "🎮 娯楽費", "🚃 交通費", "📦 その他"],
       income: ["💰 給与", "🎁 臨時収入", "🗡️ クエスト報酬", "📦 その他"]
