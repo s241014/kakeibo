@@ -487,29 +487,44 @@ function switchTab(tabId, element) {
       renderUI();
     });
 
-    // ★ 手動フォームの記録処理（変更なし）
+   
+    // 手動フォームの記録処理
     document.getElementById('record-form').addEventListener('submit', (e) => {
       e.preventDefault();
+
       const amount = parseInt(document.getElementById('amount').value, 10);
       if (isNaN(amount) || amount <= 0) return;
 
-      const baseExp = Math.max(1, Math.floor(amount * 0.02)); 
-      const randomExp = Math.floor(Math.random() * 42) + 13; 
+      const baseExp = Math.max(1, Math.floor(amount * 0.02));
+      const randomExp = Math.floor(Math.random() * 42) + 13;
       const gainedExp = baseExp + randomExp;
 
       const data = loadData();
       const now = new Date();
+
       data.history.push({
-        id: Date.now(), type: currentType,
+        id: Date.now(),
+        type: currentType,
         date: `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`,
         category: document.getElementById('category').value,
-        amount: amount, exp: gainedExp
+        amount: amount,
+        exp: gainedExp
       });
 
+      // 既存の家計簿データを保存
       saveData(data.history);
+
+      // Supabaseに記録追加イベントを保存
+      void logActivity("record_added", {
+        record_type: currentType,
+        count: 1,
+        source: "manual"
+      });
+
       resetForm();
       renderUI();
     });
+
 
     window.deleteRecord = function(id) {
       if(!confirm("この記録を取り消しますか？")) return;
