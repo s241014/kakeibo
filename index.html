@@ -455,34 +455,62 @@ function switchTab(tabId, element) {
       document.getElementById('record-form').style.display = 'block';
     }
 
-    // ★ 承認待ちリストの一括記録処理
+      // 承認待ちリストの一括記録処理
     document.getElementById('batch-submit-btn').addEventListener('click', () => {
       const items = document.querySelectorAll('.pending-item');
       const data = loadData();
       const now = new Date();
       const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
-      
+
       let totalGainedExp = 0;
+      let addedCount = 0;
 
       items.forEach((item, index) => {
-        const amount = parseInt(item.querySelector('.pending-amount').value, 10);
+        const amount = parseInt(
+          item.querySelector('.pending-amount').value,
+          10
+        );
         const category = item.querySelector('.pending-category').value;
+
+        // 金額が不正な項目は記録しない
         if (isNaN(amount) || amount <= 0) return;
 
-        // ★ 完全維持：金額の2% ＋ 13〜54のランダムな乱数を付与
-        const baseExp = Math.max(1, Math.floor(amount * 0.02)); 
-        const randomExp = Math.floor(Math.random() * 42) + 13; 
+        // 既存のEXP計算を維持
+        const baseExp = Math.max(1, Math.floor(amount * 0.02));
+        const randomExp = Math.floor(Math.random() * 42) + 13;
         const gainedExp = baseExp + randomExp;
+
         totalGainedExp += gainedExp;
 
         data.history.push({
-          id: Date.now() + index, // 一意にするためindexを加算
-          type: currentType, date: dateStr, category: category, amount: amount, exp: gainedExp
+          id: Date.now() + index,
+          type: currentType,
+          date: dateStr,
+          category: category,
+          amount: amount,
+          exp: gainedExp
         });
+
+        // 実際に追加できた件数を数える
+        addedCount++;
       });
 
+      // 既存の家計簿データを保存
       saveData(data.history);
-      alert(`${items.length}件のクエストを一括達成しました！\n（獲得: ${totalGainedExp} EXP）`);
+
+      // 1件以上追加できた場合のみSupabaseに記録
+      if (addedCount > 0) {
+        void logActivity("record_added", {
+          record_type: currentType,
+          count: addedCount,
+          source: "receipt_batch"
+        });
+      }
+
+      alert(
+        `${addedCount}件のクエストを一括達成しました！\n（獲得: ${totalGainedExp} EXP）`
+      );
+
       resetForm();
       renderUI();
     });
