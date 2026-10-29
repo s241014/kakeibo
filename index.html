@@ -561,42 +561,66 @@ function switchTab(tabId, element) {
       renderUI();
     };
 
-    function changeMonth(diff) {
-      currentCalDate.setMonth(currentCalDate.getMonth() + diff);
-      renderCalendar();
+
+function renderCalendar() {
+  const year = currentCalDate.getFullYear();
+  const month = currentCalDate.getMonth();
+
+  document.getElementById('cal-month-label').textContent =
+    `${year}年${month + 1}月`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const calcData = loadData();
+
+  let html = '';
+
+  // 月初までの空白セル
+  for (let i = 0; i < firstDay; i++) {
+    html += '<div class="cal-cell" style="background:transparent; border:none;"></div>';
+  }
+
+  // 日付ごとの収支を計算
+  for (let d = 1; d <= lastDate; d++) {
+    const targetDateStr = `${year}/${month + 1}/${d}`;
+
+    let dayExpense = 0;
+    let dayIncome = 0;
+
+    calcData.history
+      .filter(h => h.date === targetDateStr)
+      .forEach(h => {
+        if (h.type === 'expense') {
+          dayExpense += h.amount;
+        } else if (h.type === 'income') {
+          dayIncome += h.amount;
+        }
+      });
+
+    // 収入から支出を引いた収支
+    const balance = dayIncome - dayExpense;
+
+    let amountHtml = '';
+
+    if (balance > 0) {
+      amountHtml =
+        `<div class="cal-amount amount-inc">+${balance.toLocaleString()}</div>`;
+    } else if (balance < 0) {
+      amountHtml =
+        `<div class="cal-amount amount-exp">${balance.toLocaleString()}</div>`;
     }
 
-    function renderCalendar() {
-      const year = currentCalDate.getFullYear();
-      const month = currentCalDate.getMonth();
-      document.getElementById('cal-month-label').textContent = `${year}年${month + 1}月`;
+    html += `
+      <div class="cal-cell">
+        <div class="cal-date">${d}</div>
+        ${amountHtml}
+      </div>
+    `;
+  }
 
-      const firstDay = new Date(year, month, 1).getDay();
-      const lastDate = new Date(year, month + 1, 0).getDate();
-      const calcData = loadData();
-      let html = '';
+  document.getElementById('cal-body').innerHTML = html;
+}
 
-      for(let i = 0; i < firstDay; i++) { 
-          html += `<div class="cal-cell" style="background:transparent; border:none;"></div>`; 
-      }
-      
-      for(let d = 1; d <= lastDate; d++) {
-        const targetDateStr = `${year}/${month + 1}/${d}`;
-        let dayExpense = 0; let dayIncome = 0;
-        
-        calcData.history.filter(h => h.date === targetDateStr).forEach(h => {
-          if(h.type === 'expense') dayExpense += h.amount;
-          else dayIncome += h.amount;
-        });
-
-        let amountHtml = '';
-        if(dayExpense > 0) amountHtml += `<div class="cal-amount amount-exp">-${dayExpense.toLocaleString()}</div>`;
-        if(dayIncome > 0) amountHtml += `<div class="cal-amount amount-inc">+${dayIncome.toLocaleString()}</div>`;
-
-        html += `<div class="cal-cell"><div class="cal-date">${d}</div>${amountHtml}</div>`;
-      }
-      document.getElementById('cal-body').innerHTML = html;
-    }
 
     // ★ 実績機能（完全維持）
     function renderAchievements(calcData) {
