@@ -2,6 +2,7 @@
 <html lang="ja">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <head>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Money Chronicle</title>
@@ -150,11 +151,23 @@
           <h2 id="cal-month-label" style="font-size: 1.1rem; color: var(--accent-color);"></h2>
           <button class="cal-btn" onclick="changeMonth(1)">▶</button>
         </div>
-        <div class="cal-grid" style="margin-bottom: 4px;">
+       <div class="cal-grid" id="cal-weekdays"
+     style="margin-bottom: 4px;">
           <div class="cal-day-header">日</div><div class="cal-day-header">月</div><div class="cal-day-header">火</div>
           <div class="cal-day-header">水</div><div class="cal-day-header">木</div><div class="cal-day-header">金</div><div class="cal-day-header">土</div>
         </div>
         <div class="cal-grid" id="cal-body"></div>
+        
+<button type="button" class="btn" id="monthly-chart-btn"
+  style="margin-top: 12px;">
+  📊 月間収支グラフを表示
+</button>
+
+<div id="monthly-chart-container"
+  style="display: none; margin-top: 16px;">
+  <canvas id="monthly-chart"></canvas>
+</div>
+
       </div>
     </div>
 
@@ -621,7 +634,117 @@ function renderCalendar() {
 
   document.getElementById('cal-body').innerHTML = html;
 }
+    function changeMonth(diff) {
+  currentCalDate.setMonth(currentCalDate.getMonth() + diff);
+  renderCalendar();
 
+  if (isGraphVisible) {
+    renderMonthlyChart();
+  }
+}
+let monthlyChart = null;
+let isGraphVisible = false;
+
+document.getElementById('monthly-chart-btn')
+  .addEventListener('click', () => {
+    isGraphVisible = !isGraphVisible;
+
+    document.getElementById('monthly-chart-container').style.display =
+      isGraphVisible ? 'block' : 'none';
+
+    document.getElementById('monthly-chart-btn').textContent =
+      isGraphVisible
+        ? '📅 カレンダーに戻る'
+        : '📊 月間収支グラフを表示';
+
+    document.getElementById('cal-body').style.display =
+      isGraphVisible ? 'none' : 'grid';
+
+    const weekdayGrid = document.getElementById('cal-weekdays');
+    if (weekdayGrid) {
+      weekdayGrid.style.display =
+        isGraphVisible ? 'none' : 'grid';
+    }
+
+    if (isGraphVisible) {
+      renderMonthlyChart();
+    }
+  });
+
+function renderMonthlyChart() {
+  const year = currentCalDate.getFullYear();
+  const month = currentCalDate.getMonth();
+  const data = loadData();
+
+  const lastDate = new Date(year, month + 1, 0).getDate();
+  const labels = [];
+  const balances = [];
+
+  for (let d = 1; d <= lastDate; d++) {
+    const targetDate = `${year}/${month + 1}/${d}`;
+    let income = 0;
+    let expense = 0;
+
+    data.history.forEach(item => {
+      if (item.date === targetDate) {
+        if (item.type === 'income') {
+          income += item.amount;
+        } else if (item.type === 'expense') {
+          expense += item.amount;
+        }
+      }
+    });
+
+    labels.push(`${d}日`);
+    balances.push(income - expense);
+  }
+
+  const ctx = document.getElementById('monthly-chart')
+    .getContext('2d');
+
+  if (monthlyChart) {
+    monthlyChart.destroy();
+  }
+
+  monthlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '日別収支（円）',
+        data: balances,
+        backgroundColor: balances.map(value =>
+          value >= 0 ? '#8be9fd' : '#ff5555'
+        ),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: {
+          display: true,
+          text: `${year}年${month + 1}月の収支`
+        },
+        tooltip: {
+          callbacks: {
+            label: context =>
+              `${context.raw.toLocaleString()}円`
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: value =>
+              value.toLocaleString() + '円'
+          }
+        }
+      }
+    }
+  });
+}
 
 
     // ★ 実績機能（完全維持）
